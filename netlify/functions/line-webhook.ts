@@ -254,7 +254,6 @@ async function callGPT(settings: any, history: any[], currentMessage: string) {
       text: completion.choices[0].message.content || '',
       id: completion.id
     };
-  }
 }
 
 async function callGemini(settings: any, history: any[], currentMessage: string) {
