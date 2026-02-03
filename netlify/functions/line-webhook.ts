@@ -206,8 +206,10 @@ async function callGPT(settings: any, history: any[], currentMessage: string) {
 }
 
 async function callGemini(settings: any, history: any[], currentMessage: string) {
-  const genAI = new GoogleGenerativeAI(settings.gemini_api_key);
-  const model = genAI.getGenerativeModel({ model: settings.gemini_model_name });
+  const isGemini3 = settings.gemini_model_name.includes('gemini-3');
+  const apiKey = settings.gemini_api_key;
+  
+  // 處理檔案
   let filePart: any = null;
   if (settings.reference_file_url) {
     try {
@@ -215,21 +217,52 @@ async function callGemini(settings: any, history: any[], currentMessage: string)
       if (response.ok) {
         const buffer = await response.arrayBuffer();
         const base64Data = Buffer.from(buffer).toString('base64');
-        filePart = { inlineData: { data: base64Data, mimeType: settings.reference_file_url.endsWith('.pdf') ? 'application/pdf' : 'text/plain' } };
+        filePart = { inline_data: { data: base64Data, mime_type: settings.reference_file_url.endsWith('.pdf') ? 'application/pdf' : 'text/plain' } };
       }
     } catch (e) {}
   }
 
-  const chat = model.startChat({
-    history: history.map(h => ({ role: h.sender === 'user' ? 'user' : 'model', parts: [{ text: h.message }] })),
-    generationConfig: { temperature: settings.gemini_temperature, maxOutputTokens: settings.gemini_max_tokens },
+  // 建立 Contents 結構
+  const contents = history.map(h => ({
+    role: h.sender === 'user' ? 'user' : 'model',
+    parts: [{ text: h.message }]
+  }));
+
+  const userParts: any[] = [{ text: `System: ${settings.system_prompt}\nReference: ${settings.reference_text}` }];
+  if (filePart) userParts.push(filePart);
+  userParts.push({ text: `User: ${currentMessage}` });
+  contents.push({ role: 'user', parts: userParts });
+
+  // 建立 Config
+  const generationConfig: any = {
+    temperature: settings.gemini_temperature || 1.0,
+    maxOutputTokens: settings.gemini_max_tokens,
+  };
+
+  // Gemini 3 專屬思考配置
+  if (isGemini3) {
+    generationConfig.thinking_config = {
+      include_thoughts: true,
+      thinking_level: settings.gemini_thinking_level || 'high'
+    };
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.gemini_model_name}:generateContent?key=${apiKey}`;
+  
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      generationConfig
+    })
   });
 
-  const promptParts: any[] = [{ text: `System: ${settings.system_prompt}\nReference: ${settings.reference_text}` }];
-  if (filePart) promptParts.push(filePart);
-  promptParts.push({ text: `User: ${currentMessage}` });
+  const result: any = await res.json();
+  if (!res.ok || result.error) throw new Error(result.error?.message || 'Gemini API Error');
   
-  const result = await chat.sendMessage(promptParts);
-  const response = await result.response;
-  return response.text();
+  // Gemini 的回傳結構可能包含 thoughts，我們只取文字部分
+  const candidate = result.candidates?.[0];
+  const text = candidate?.content?.parts?.find((p: any) => p.text)?.text || '';
+  return text;
 }

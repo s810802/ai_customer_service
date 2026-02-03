@@ -21,8 +21,9 @@ CREATE TABLE IF NOT EXISTS public.settings (
     -- Gemini Settings
     gemini_api_key TEXT,
     gemini_model_name TEXT DEFAULT 'gemini-pro',
-    gemini_temperature FLOAT DEFAULT 0.7,
+    gemini_temperature FLOAT DEFAULT 1.0, -- Gemini 3 建議預設為 1.0
     gemini_max_tokens INTEGER DEFAULT 500,
+    gemini_thinking_level TEXT DEFAULT 'high', -- low, medium, high, minimal
     
     -- Common AI Settings
     system_prompt TEXT DEFAULT '你是一個專業的客服助手。',

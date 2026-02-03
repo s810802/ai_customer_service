@@ -156,6 +156,20 @@ export default function Dashboard() {
               <input type="number" name={settings.active_ai === 'gpt' ? 'gpt_max_tokens' : 'gemini_max_tokens'} value={settings.active_ai === 'gpt' ? settings.gpt_max_tokens : settings.gemini_max_tokens} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" />
             </div>
           </div>
+
+          {settings.active_ai === 'gemini' && settings.gemini_model_name?.includes('gemini-3') && (
+            <div className="col-span-2 p-4 bg-purple-50 rounded-lg border border-purple-100">
+              <label className="block text-sm font-bold text-purple-800 mb-1">Gemini 3 思考程度 (Thinking Level)</label>
+              <select name="gemini_thinking_level" value={settings.gemini_thinking_level || 'high'} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white">
+                <option value="minimal">Minimal (不思考/極速 - 僅 Flash 支援)</option>
+                <option value="low">Low (降低延遲)</option>
+                <option value="medium">Medium (平衡 - 僅 Flash 支援)</option>
+                <option value="high">High (預設/深層推理)</option>
+              </select>
+              <p className="text-xs text-purple-600 mt-2">Gemini 3 系列建議 Temperature 保持為 1.0 以獲得最佳推理效果。</p>
+            </div>
+          )}
+
           {settings.active_ai === 'gpt' && settings.gpt_model_name?.includes('gpt-5') && (
             <div className="col-span-2 grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <div>
