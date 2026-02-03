@@ -27,6 +27,12 @@ CREATE TABLE IF NOT EXISTS public.settings (
     agent_user_ids TEXT DEFAULT ''
 );
 
+-- 去重記錄表 (防止重試導致狀態回滾)
+CREATE TABLE IF NOT EXISTS public.processed_events (
+    event_id TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
 -- 2. 用戶狀態表
 CREATE TABLE IF NOT EXISTS public.user_states (
     line_user_id TEXT PRIMARY KEY,

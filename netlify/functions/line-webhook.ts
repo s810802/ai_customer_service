@@ -33,16 +33,23 @@ export const handler: Handler = async (event) => {
       const userMessage = (lineEvent.message.text || '').trim();
       const eventId = (lineEvent as any).webhookEventId;
 
-      if (!userMessage) continue;
+      if (!userMessage || !eventId) continue;
 
-      // 1. 嚴格去重機制
-      const { data: userState } = await supabase.from('user_states').select('*').eq('line_user_id', userId).single();
-      if (userState?.last_event_id === eventId) {
-        console.log(`[Skip] Duplicate event: ${eventId}`);
-        continue; 
+      // 1. 強制去重 (關鍵防禦)
+      // 嘗試寫入 event_id，如果重複，資料庫會報錯
+      const { error: eventError } = await supabase
+        .from('processed_events')
+        .insert({ event_id: eventId });
+
+      if (eventError) {
+        console.log(`[Dedupe] Skipping already processed event: ${eventId}`);
+        continue; // 這是重複請求，直接跳過，不進行任何狀態更新
       }
 
-      // 2. 關鍵字偵測邏輯優化
+      // 2. 獲取當前狀態
+      const { data: userState } = await supabase.from('user_states').select('*').eq('line_user_id', userId).single();
+      
+      // 3. 關鍵字偵測
       const handoverKeywords = settings.handover_keywords
         ?.replace(/，/g, ',')
         .split(',')
@@ -54,25 +61,16 @@ export const handler: Handler = async (event) => {
         return userMessage.includes(k);
       });
 
-      // 3. 處理狀態更新 (關鍵：合併更新以防止 ID 遺失)
-      const now = new Date().toISOString();
-      const updatePayload: any = { 
-        line_user_id: userId, 
-        last_event_id: eventId 
-      };
-
       if (matchedKeyword) {
-        console.log(`[Handover] User: ${userId}, Msg: "${userMessage}", Keyword: "${matchedKeyword}"`);
-        
+        console.log(`[Handover] Triggered by keyword: ${matchedKeyword}`);
         let nickname = userState?.nickname || '匿名用戶';
         try { const p = await lineClient.getProfile(userId); nickname = p.displayName; } catch (e) {}
         
-        // 進入真人模式
         await supabase.from('user_states').upsert({
-          ...updatePayload,
+          line_user_id: userId, 
           nickname,
-          is_human_mode: true,
-          last_human_interaction: now 
+          is_human_mode: true, 
+          last_human_interaction: new Date().toISOString()
         });
 
         await lineClient.replyMessage(lineEvent.replyToken, { type: 'text', text: '已為您轉接真人客服，請稍候。' });
@@ -86,22 +84,15 @@ export const handler: Handler = async (event) => {
         continue;
       }
 
-      // 4. 檢查真人模式狀態
+      // 4. 真人模式判斷
       if (userState?.is_human_mode) {
         const lastInteraction = new Date(userState.last_human_interaction).getTime();
         const timeoutMs = (settings.handover_timeout_minutes || 30) * 60 * 1000;
-        
-        if (new Date().getTime() - lastInteraction < timeoutMs) {
-          // 還在有效真人時間內，僅更新 Event ID 以防止重試，但不回覆
-          await supabase.from('user_states').upsert(updatePayload);
-          continue; 
-        }
-        // 已超時，準備由 AI 接手
+        if (new Date().getTime() - lastInteraction < timeoutMs) continue; 
+        await supabase.from('user_states').update({ is_human_mode: false }).eq('line_user_id', userId);
       }
 
-      // 5. 呼叫 AI 前先更新 Event ID
-      await supabase.from('user_states').upsert({ ...updatePayload, is_human_mode: false });
-
+      // 5. 呼叫 AI
       if (!settings.is_ai_enabled) continue;
 
       let aiResult = '';
