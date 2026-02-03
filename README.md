@@ -20,7 +20,6 @@
 1. 建立 [Supabase](https://supabase.com/) 專案。
 2. 前往 **SQL Editor**，複製並執行下方的 **「完整資料庫腳本」**。
 3. 在 **Authentication > Users** 建立一組管理員帳號（用於登入後台）。
-4. 在 **Storage** 建立一個名為 `knowledge_base` 的 **Public Bucket**。
 
 ### 3. 一鍵部署至 Netlify
 1. 點擊上方的 **Deploy to Netlify** 按鈕，或手動連結您的 GitHub 專案。
@@ -36,7 +35,7 @@
 ---
 
 ## 📜 完整資料庫腳本 (SQL)
-請將以下內容完整複製到 Supabase 的 SQL Editor 中執行：
+請將以下內容完整複製到 Supabase 的 SQL Editor 中執行（這會自動建立 Table 與 Storage 權限）：
 
 ```sql
 -- 1. 設定表
@@ -83,13 +82,14 @@ CREATE POLICY "Allow Auth Access" ON public.settings FOR ALL USING (auth.role() 
 CREATE POLICY "Allow Auth Access States" ON public.user_states FOR ALL USING (auth.role() = 'authenticated');
 
 INSERT INTO public.settings (id) SELECT gen_random_uuid() WHERE NOT EXISTS (SELECT 1 FROM public.settings);
-```
 
----
+-- 4. 儲存空間權限 (Storage)
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('knowledge_base', 'knowledge_base', true)
+ON CONFLICT (id) DO NOTHING;
 
-## 🛠️ 本地開發
-```bash
-npm install
-# 建議使用 Netlify CLI 讀取雲端變數
-netlify dev
+CREATE POLICY "Allow Public Select" ON storage.objects FOR SELECT TO public USING (bucket_id = 'knowledge_base');
+CREATE POLICY "Allow Auth Insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'knowledge_base');
+CREATE POLICY "Allow Auth Update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'knowledge_base');
+CREATE POLICY "Allow Auth Delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'knowledge_base');
 ```
