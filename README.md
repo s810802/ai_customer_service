@@ -1,44 +1,70 @@
-# 🤖 AI 客服系統 (LINE + Supabase + React)
+# 🤖 企業級 AI 客服系統 (LINE + Supabase + React)
 
-這是一個企業級的 AI 客服後台，支援 OpenAI GPT-5/4、Google Gemini 3/1.5 以及真人客服轉接通知。
+這是一個完整、現代化的 AI 客服解決方案。整合了 **OpenAI GPT-5/4**、**Google Gemini 3/1.5**，並具備知識庫（PDF/純文字）讀取能力與 LINE 真人客服轉接系統。
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/scorpioliu0953/ai_customer_service)
 
+---
+
 ## 🌟 功能亮點
-- **雙 AI 引擎**：支援最新的 GPT-5 (Responses API) 與 Gemini 3 (Thinking Level)。
-- **知識庫支援**：支援純文字與 PDF 檔案參考，AI 會根據資料內容進行回答。
-- **真人轉接機制**：自動偵測關鍵字，發送 LINE 通知給專員，並提供手動轉回 AI 的管理後台。
+
+*   **頂級 AI 支援**：首創支援 GPT-5 (Responses API) 與 Gemini 3 (Thinking Level) 最新規格。
+*   **多模態知識庫**：可直接上傳產品手冊 (PDF) 或輸入文字，讓 AI 成為領域專家。
+*   **真人轉接系統**：自動偵測關鍵字，即時發送 LINE 推送通知給客服專員。
+*   **極致穩定性**：內建資料庫級去重機制，解決 LINE Webhook 重複發送導致的誤觸問題。
+*   **現代化後台**：使用 React + Tailwind CSS 打造，支援深色模式與行動裝置。
 
 ---
 
-## 🚀 快速安裝步驟
+## 🚀 快速安裝手冊
 
-### 1. Fork 本專案
-點擊頁面右上角的 **Fork** 按鈕，將本專案複製到您的 GitHub 帳號下。
+請依照以下四個步驟完成您的系統搭建：
 
-### 2. 資料庫設定 (Supabase)
-1. 建立 [Supabase](https://supabase.com/) 專案。
-2. 前往 **SQL Editor**，複製並執行下方的 **「完整資料庫腳本」**。
-3. 在 **Authentication > Users** 建立一組管理員帳號（用於登入後台）。
+### 步驟一：Fork 專案
+1.  點擊頁面右上角的 **Fork** 按鈕，將此專案複製到您的 GitHub 帳號。
+2.  將 Fork 後的專案 Clone 到您的本地電腦（選用）。
 
-### 3. 一鍵部署至 Netlify
-1. 點擊上方的 **Deploy to Netlify** 按鈕，或手動連結您的 GitHub 專案。
-2. 在 Netlify 控制台的 **Environment variables** 設定以下變數：
+### 步驟二：Supabase 資料庫設定
+1.  登入 [Supabase 控制台](https://supabase.com/) 並建立一個新專案。
+2.  **執行 SQL 腳本**：
+    *   點擊左側 **SQL Editor** -> **New Query**。
+    *   複製並貼上本頁下方的 **[完整資料庫腳本]** 並執行。
+3.  **建立管理員**：
+    *   前往 **Authentication > Users** -> **Add User**。
+    *   手動建立一組 Email 與密碼（用於登入客服後台）。
 
-| 變數名稱 | 來源 | 說明 |
+### 步驟三：Netlify 雲端部署
+1.  點擊本頁上方的 **[Deploy to Netlify]** 按鈕。
+2.  連結您剛才 Fork 的 GitHub 儲存庫。
+3.  在 **Site configuration > Environment variables** 中設定以下四個必填變數：
+
+| 變數名稱 | 來源 (Supabase Project Settings > API) | 說明 |
 | :--- | :--- | :--- |
-| `VITE_SUPABASE_URL` | Supabase API | 前端連接資料庫用 |
-| `VITE_SUPABASE_ANON_KEY` | Supabase API | 前端公開金鑰 |
-| `SUPABASE_URL` | Supabase API | 後端 Function 用 (與前端相同) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase API | **隱私** 後端專用最高權限金鑰 |
+| `VITE_SUPABASE_URL` | **Project URL** | 前端連接資料庫 |
+| `VITE_SUPABASE_ANON_KEY` | **API Key (anon/public)** | 前端公開金鑰 |
+| `SUPABASE_URL` | **Project URL** | 後端 Function 呼叫 (與前端相同) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **API Key (service_role)** | **絕對機密！** 後端專用最高權限 |
+
+4.  設定完畢後，點擊 **Deploy** 等待部署完成。
+
+### 步驟四：LINE Messaging API 串接
+1.  登入 [LINE Developers Console](https://developers.line.biz/)。
+2.  建立 Provider 與 Messaging API Channel。
+3.  將以下資訊填入您的 **AI 客服後台 > 系統設定** 中：
+    *   `Channel Access Token`
+    *   `Channel Secret`
+4.  **設定 Webhook**：
+    *   在 LINE 後台將 Webhook URL 設為：`https://您的專案名稱.netlify.app/.netlify/functions/line-webhook`
+    *   開啟 **"Use webhook"** 選項。
 
 ---
 
 ## 📜 完整資料庫腳本 (SQL)
-請將以下內容完整複製到 Supabase 的 SQL Editor 中執行（這會自動建立 Table 與 Storage 權限）：
+
+請將以下內容完整複製並在 Supabase SQL Editor 中執行：
 
 ```sql
--- 1. 設定表
+-- [1] 系統設定表
 CREATE TABLE IF NOT EXISTS public.settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -66,38 +92,60 @@ CREATE TABLE IF NOT EXISTS public.settings (
     agent_user_ids TEXT DEFAULT ''
 );
 
--- 2. 去重記錄表
-CREATE TABLE IF NOT EXISTS public.processed_events (
-    event_id TEXT PRIMARY KEY,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
--- 3. 用戶狀態表
+-- [2] 用戶狀態表
 CREATE TABLE IF NOT EXISTS public.user_states (
     line_user_id TEXT PRIMARY KEY,
     nickname TEXT,
     is_human_mode BOOLEAN DEFAULT false,
     last_human_interaction TIMESTAMP WITH TIME ZONE,
     last_ai_reset_at TIMESTAMP WITH TIME ZONE,
-    last_event_id TEXT
+    last_event_id TEXT -- LINE 去重機制關鍵
 );
 
--- 3. 啟用 RLS 與初始資料
+-- [3] 事件去重表
+CREATE TABLE IF NOT EXISTS public.processed_events (
+    event_id TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- [4] 安全權限設定 (RLS)
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_states ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow Auth Access" ON public.settings FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow Auth Access States" ON public.user_states FOR ALL USING (auth.role() = 'authenticated');
 
+-- [5] 初始化預設資料
 INSERT INTO public.settings (id) SELECT gen_random_uuid() WHERE NOT EXISTS (SELECT 1 FROM public.settings);
 
--- 4. 儲存空間權限 (Storage)
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('knowledge_base', 'knowledge_base', true)
-ON CONFLICT (id) DO NOTHING;
-
+-- [6] 儲存空間 (Storage) 權限設定
+INSERT INTO storage.buckets (id, name, public) VALUES ('knowledge_base', 'knowledge_base', true) ON CONFLICT (id) DO NOTHING;
 CREATE POLICY "Allow Public Select" ON storage.objects FOR SELECT TO public USING (bucket_id = 'knowledge_base');
 CREATE POLICY "Allow Auth Insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'knowledge_base');
 CREATE POLICY "Allow Auth Update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'knowledge_base');
 CREATE POLICY "Allow Auth Delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'knowledge_base');
 ```
+
+---
+
+## 🛠️ 本地開發環境
+
+如果您想修改程式碼，建議使用以下方式同步雲端環境變數：
+
+```bash
+# 1. 安裝依賴
+npm install
+
+# 2. 安裝 Netlify CLI (推薦)
+npm install -g netlify-cli
+
+# 3. 連結雲端專案並啟動
+netlify login
+netlify link
+netlify dev
+```
+
+---
+
+## ⚖️ 免責聲明
+本專案僅供學習與企業原型搭建使用。請確保在使用 AI API (OpenAI/Google) 時遵守相關服務條款，並妥善保護您的 API 金鑰。
