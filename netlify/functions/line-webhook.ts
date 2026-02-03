@@ -94,7 +94,7 @@ export const handler: Handler = async (event) => {
 
         await lineClient.replyMessage(lineEvent.replyToken, {
           type: 'text',
-          text: `已為您轉接真人客服，請稍候。您的暱稱：${nickname}`,
+          text: `已為您轉接真人客服，請稍候。`,
         });
 
         // Notify Agents
