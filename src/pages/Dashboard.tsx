@@ -183,7 +183,13 @@ export default function Dashboard() {
               value={settings.active_ai === 'gpt' ? settings.gpt_model_name : settings.gemini_model_name}
               onChange={handleChange}
               className="w-full px-4 py-2 border rounded-lg"
+              placeholder={settings.active_ai === 'gpt' ? "例如: gpt-4o, gpt-5" : "例如: gemini-1.5-pro"}
             />
+            <p className="text-xs text-gray-400 mt-1">
+              {settings.active_ai === 'gpt' 
+                ? "支援所有 OpenAI 模型，包含 gpt-4o, o1-preview 或未來的 gpt-5。" 
+                : "支援 Google 最新模型，如 gemini-1.5-pro 或 gemini-1.5-flash。"}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
     
     -- GPT Settings
     gpt_api_key TEXT,
-    gpt_model_name TEXT DEFAULT 'gpt-3.5-turbo',
+    gpt_model_name TEXT DEFAULT 'gpt-4o',
     gpt_temperature FLOAT DEFAULT 0.7,
     gpt_max_tokens INTEGER DEFAULT 500,
     
