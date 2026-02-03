@@ -108,25 +108,27 @@ export const handler: Handler = async (event) => {
       const history = contextLogs?.reverse() || [];
 
       // 6. Call AI
-      let aiResponse = '';
+      let aiResult: { text: string, id?: string } = { text: '' };
       if (settings.active_ai === 'gpt') {
-        aiResponse = await callGPT(settings, history, userMessage);
+        aiResult = await callGPT(settings, history, userMessage);
       } else {
-        aiResponse = await callGemini(settings, history, userMessage);
+        const text = await callGemini(settings, history, userMessage);
+        aiResult = { text };
       }
 
       // 7. Reply and Log
-      if (aiResponse) {
+      if (aiResult.text) {
         await lineClient.replyMessage(lineEvent.replyToken, {
           type: 'text',
-          text: aiResponse,
+          text: aiResult.text,
         });
 
         await supabase.from('chat_logs').insert({
           line_user_id: userId,
-          message: aiResponse,
+          message: aiResult.text,
           sender: 'ai',
           ai_type: settings.active_ai,
+          ai_response_id: aiResult.id
         });
       }
     }
@@ -136,45 +138,71 @@ export const handler: Handler = async (event) => {
 };
 
 async function callGPT(settings: any, history: any[], currentMessage: string) {
-  const openai = new OpenAI({ apiKey: settings.gpt_api_key });
+  const isGPT5 = settings.gpt_model_name.includes('gpt-5');
   
+  // Fetch reference file if exists
   let fileContent = '';
   if (settings.reference_file_url) {
     try {
       const response = await fetch(settings.reference_file_url);
-      if (response.ok) {
-        fileContent = await response.text();
-        // Simple strategy: if it's text, append to context. 
-        // Note: For binary PDFs, this simple fetch might need more parsing logic.
-      }
-    } catch (e) {
-      console.error('Fetch file error:', e);
-    }
+      if (response.ok) fileContent = await response.text();
+    } catch (e) { console.error('Fetch file error:', e); }
   }
 
-  const messages: any[] = [
-    { 
-      role: 'system', 
-      content: `${settings.system_prompt}\n\n參考文字：\n${settings.reference_text}\n\n檔案內容參考：\n${fileContent}` 
+  const systemContent = `${settings.system_prompt}\n\n參考文字：\n${settings.reference_text}\n\n檔案內容參考：\n${fileContent}`;
+
+  if (isGPT5) {
+    // 使用新的 Responses API (GPT-5 專用)
+    const lastAIResponse = [...history].reverse().find(h => h.sender === 'ai' && h.ai_response_id);
+    
+    const body: any = {
+      model: settings.gpt_model_name,
+      input: `System: ${systemContent}\n\nUser: ${currentMessage}`,
+      reasoning: { effort: settings.gpt_reasoning_effort || 'none' },
+      text: { verbosity: settings.gpt_verbosity || 'medium' }
+    };
+
+    // 傳遞 CoT (Chain of Thought) 以提升智力
+    if (lastAIResponse) {
+      body.previous_response_id = lastAIResponse.ai_response_id;
     }
-  ];
 
-  for (const h of history) {
-    messages.push({ role: h.sender === 'user' ? 'user' : 'assistant', content: h.message });
-  }
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${settings.gpt_api_key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
 
-  if (history[history.length - 1]?.message !== currentMessage) {
+    const result: any = await response.json();
+    return {
+      text: result.output?.text || '',
+      id: result.id
+    };
+  } else {
+    // 傳統 Chat Completions API (GPT-4 以前)
+    const openai = new OpenAI({ apiKey: settings.gpt_api_key });
+    const messages: any[] = [{ role: 'system', content: systemContent }];
+
+    for (const h of history) {
+      messages.push({ role: h.sender === 'user' ? 'user' : 'assistant', content: h.message });
+    }
     messages.push({ role: 'user', content: currentMessage });
+
+    const completion = await openai.chat.completions.create({
+      model: settings.gpt_model_name,
+      messages: messages,
+      temperature: settings.gpt_temperature,
+      max_tokens: settings.gpt_max_tokens,
+    });
+
+    return {
+      text: completion.choices[0].message.content || '',
+      id: completion.id
+    };
   }
-
-  const completion = await openai.chat.completions.create({
-    model: settings.gpt_model_name,
-    messages: messages,
-    temperature: settings.gpt_temperature,
-    max_tokens: settings.gpt_max_tokens,
-  });
-
-  return completion.choices[0].message.content || '';
 }
 
 async function callGemini(settings: any, history: any[], currentMessage: string) {

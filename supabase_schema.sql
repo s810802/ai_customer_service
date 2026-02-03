@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS public.settings (
     gpt_model_name TEXT DEFAULT 'gpt-4o',
     gpt_temperature FLOAT DEFAULT 0.7,
     gpt_max_tokens INTEGER DEFAULT 500,
+    gpt_reasoning_effort TEXT DEFAULT 'none', -- none, low, medium, high, xhigh
+    gpt_verbosity TEXT DEFAULT 'medium', -- low, medium, high
     
     -- Gemini Settings
     gemini_api_key TEXT,
@@ -44,7 +46,8 @@ CREATE TABLE IF NOT EXISTS public.chat_logs (
     user_name TEXT,
     message TEXT NOT NULL,
     sender TEXT NOT NULL, -- 'user' or 'ai'
-    ai_type TEXT -- 'gpt' or 'gemini'
+    ai_type TEXT, -- 'gpt' or 'gemini'
+    ai_response_id TEXT -- For GPT-5 CoT passing
 );
 
 -- User state table to track handover mode

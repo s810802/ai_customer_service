@@ -214,6 +214,39 @@ export default function Dashboard() {
               />
             </div>
           </div>
+
+          {settings.active_ai === 'gpt' && settings.gpt_model_name.includes('gpt-5') && (
+            <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <div>
+                <label className="block text-sm font-bold text-blue-800 mb-1">GPT-5 推理力道 (Reasoning Effort)</label>
+                <select 
+                  name="gpt_reasoning_effort" 
+                  value={settings.gpt_reasoning_effort} 
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-lg bg-white"
+                >
+                  <option value="none">None (預設/低延遲)</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="xhigh">XHigh (最強推理)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-blue-800 mb-1">GPT-5 詳細程度 (Verbosity)</label>
+                <select 
+                  name="gpt_verbosity" 
+                  value={settings.gpt_verbosity} 
+                  onChange={handleChange}
+                  className="w-col px-4 py-2 border rounded-lg bg-white"
+                >
+                  <option value="low">Low (簡潔)</option>
+                  <option value="medium">Medium (標準)</option>
+                  <option value="high">High (詳盡)</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
