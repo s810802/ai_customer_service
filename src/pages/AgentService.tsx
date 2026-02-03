@@ -24,17 +24,22 @@ export default function AgentService() {
   };
 
   const switchToAI = async (userId: string) => {
-    const { error } = await supabase
-      .from('user_states')
-      .update({ 
-        is_human_mode: false,
-        last_ai_reset_at: new Date().toISOString() 
-      })
-      .eq('line_user_id', userId);
+    try {
+      const { error } = await supabase
+        .from('user_states')
+        .update({ 
+          is_human_mode: false,
+          last_ai_reset_at: new Date().toISOString() 
+        })
+        .eq('line_user_id', userId);
 
-    if (!error) {
+      if (error) throw error;
+
       alert('已成功切換回 AI 客服，系統將在接下來 3 分鐘內忽略該用戶的轉接關鍵字。');
       fetchHandoverUsers();
+    } catch (err: any) {
+      console.error('Switch back to AI error:', err);
+      alert(`操作失敗：${err.message}\n請確認您已執行 SQL 增加 last_ai_reset_at 欄位。`);
     }
   };
 
