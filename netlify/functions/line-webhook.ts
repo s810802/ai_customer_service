@@ -191,14 +191,15 @@ async function callGPT(settings: any, history: any[], currentMessage: string) {
   const completionParams: any = {
     model: settings.gpt_model_name,
     messages: messages,
-    temperature: settings.gpt_temperature,
   };
 
-  // 根據模型名稱決定使用哪種 token 參數
+  // 根據模型名稱決定使用哪種 token 參數與是否支援 temperature
   if (isGPT5 || settings.gpt_model_name.startsWith('o1') || settings.gpt_model_name.startsWith('o3')) {
     completionParams.max_completion_tokens = settings.gpt_max_tokens;
+    // GPT-5/o1/o3 系列在推理模式下不支援自訂 temperature，強制使用預設值 1.0
   } else {
     completionParams.max_tokens = settings.gpt_max_tokens;
+    completionParams.temperature = settings.gpt_temperature;
   }
 
   const completion = await openai.chat.completions.create(completionParams);
