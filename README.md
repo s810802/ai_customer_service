@@ -76,24 +76,34 @@ CREATE TABLE IF NOT EXISTS public.settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    
     is_ai_enabled BOOLEAN DEFAULT true,
     active_ai TEXT DEFAULT 'gpt',
+
+    -- GPT 5.2 設定
     gpt_api_key TEXT,
-    gpt_model_name TEXT DEFAULT 'gpt-4.1-mini',
+    gpt_model_name TEXT DEFAULT 'gpt-5.2',
     gpt_temperature FLOAT DEFAULT 0.7,
-    gpt_max_tokens INTEGER DEFAULT 2000,
-    gpt_reasoning_effort TEXT DEFAULT 'none',
+    gpt_max_tokens INTEGER DEFAULT 4000,
+    gpt_reasoning_effort TEXT DEFAULT 'medium',
     gpt_verbosity TEXT DEFAULT 'medium',
+
+    -- Gemini (保留備用)
     gemini_api_key TEXT,
     gemini_model_name TEXT DEFAULT 'gemini-pro',
     gemini_temperature FLOAT DEFAULT 1.0,
     gemini_max_tokens INTEGER DEFAULT 2000,
     gemini_thinking_level TEXT DEFAULT 'high',
+
     system_prompt TEXT DEFAULT '你是一個專業的客服助手。',
     reference_text TEXT DEFAULT '',
     reference_file_url TEXT DEFAULT '',
+
+    -- LINE Bot
     line_channel_access_token TEXT,
     line_channel_secret TEXT,
+
+    -- 人工接管設定
     handover_keywords TEXT DEFAULT '真人,客服,人工',
     handover_timeout_minutes INTEGER DEFAULT 30,
     agent_user_ids TEXT DEFAULT ''
@@ -106,7 +116,7 @@ CREATE TABLE IF NOT EXISTS public.user_states (
     is_human_mode BOOLEAN DEFAULT false,
     last_human_interaction TIMESTAMP WITH TIME ZONE,
     last_ai_reset_at TIMESTAMP WITH TIME ZONE,
-    last_event_id TEXT -- LINE 去重機制關鍵
+    last_event_id TEXT
 );
 
 -- [3] 事件去重表
@@ -119,18 +129,50 @@ CREATE TABLE IF NOT EXISTS public.processed_events (
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_states ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow Auth Access" ON public.settings FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow Auth Access States" ON public.user_states FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow Auth Access"
+ON public.settings
+FOR ALL
+USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow Auth Access States"
+ON public.user_states
+FOR ALL
+USING (auth.role() = 'authenticated');
 
 -- [5] 初始化預設資料
-INSERT INTO public.settings (id) SELECT gen_random_uuid() WHERE NOT EXISTS (SELECT 1 FROM public.settings);
+INSERT INTO public.settings (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.settings);
 
--- [6] 儲存空間 (Storage) 權限設定
-INSERT INTO storage.buckets (id, name, public) VALUES ('knowledge_base', 'knowledge_base', true) ON CONFLICT (id) DO NOTHING;
-CREATE POLICY "Allow Public Select" ON storage.objects FOR SELECT TO public USING (bucket_id = 'knowledge_base');
-CREATE POLICY "Allow Auth Insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'knowledge_base');
-CREATE POLICY "Allow Auth Update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'knowledge_base');
-CREATE POLICY "Allow Auth Delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'knowledge_base');
+-- [6] Storage 權限設定
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('knowledge_base', 'knowledge_base', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Allow Public Select"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'knowledge_base');
+
+CREATE POLICY "Allow Auth Insert"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'knowledge_base');
+
+CREATE POLICY "Allow Auth Update"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (bucket_id = 'knowledge_base');
+
+CREATE POLICY "Allow Auth Delete"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (bucket_id = 'knowledge_base');
+
 ```
 
 ---
